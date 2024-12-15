@@ -129,12 +129,15 @@ export const runMainBotFeature = async () => {
     const notifications = await getNotifications();
     const unreadMentions = notifications.filter(n => !n.isRead && n.reason == "mention");
 
+    if(unreadMentions.length == 0) {
+        return;
+    }
+
     await Promise.all(
         unreadMentions.map(async (mention) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const record = mention.record as any;
             const rootPost = await getPost(record.reply.root.uri);
-
       
             let respondText = ""
 
