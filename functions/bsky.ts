@@ -1,9 +1,10 @@
 "use server";
 
 import { AtpAgent } from "@atproto/api";
-import { PostView } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
+import { PostView, ThreadViewPost } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
 import { cache } from "react";
 import { detectAI } from "./ai-detector";
+import { Notification } from "@atproto/api/dist/client/types/app/bsky/notification/listNotifications";
 
 export const getAgent = cache(async (): Promise<AtpAgent> => {
     const agent =  new AtpAgent({
@@ -42,7 +43,7 @@ export const getImagesOfPost = async (post: PostView) => {
     return images?.map(image => image.thumb) ?? []
 }
 
-export const getNotifications = async (reason?: string[]) => {
+export const getNotifications = async (reason?: string[]): Promise<Notification[]> => {
     const agent = await getAgent();
     const { data: { notifications }} = await agent.listNotifications({
         limit: 10,
@@ -124,19 +125,41 @@ export const classifyPost = async (post: PostView) => {
     return await detectAI(latestImage);
 }    
 
+export const alreadyRepliedToComment = async({ uri }: { uri: string }): Promise<boolean> => {
+    if(!uri) return false;
+    const agent = await getAgent();
+    const { data: { thread } } = await agent.getPostThread({
+        uri: uri,
+        depth: 1
+    })
+
+    const replies = thread.replies as ThreadViewPost[];
+
+    return replies.some(reply => reply.post.author.handle === process.env.BLUESKY_HANDLE!);
+
+}
 
 export const runMainBotFeature = async () => {
     const notifications = await getNotifications();
-    const unreadMentions = notifications.filter(n => !n.isRead && n.reason == "mention");
+    const mentions = notifications.filter(n => n.reason == "mention");
+    console.log("Number of notifications:", mentions.length)
 
-    if(unreadMentions.length == 0) {
+    if(mentions.length == 0) {
         return;
     }
 
     await Promise.all(
-        unreadMentions.map(async (mention) => {
+        mentions.map(async (mention) => {
+            
+            // check if already replied to this
+            if(await alreadyRepliedToComment(mention)) {
+                return;
+            }
+
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const record = mention.record as any;
+            if(!record || !record.reply?.root?.uri) return;
+
             const rootPost = await getPost(record.reply.root.uri);
       
             let respondText = ""
