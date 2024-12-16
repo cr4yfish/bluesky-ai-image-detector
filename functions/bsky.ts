@@ -1,19 +1,33 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { AtpAgent } from "@atproto/api";
+import { AtpAgent, AtpSessionData } from "@atproto/api";
 import { PostView, ThreadViewPost } from "@atproto/api/dist/client/types/app/bsky/feed/defs";
 import { cache } from "react";
 import { detectAI } from "./ai-detector";
 import { Notification } from "@atproto/api/dist/client/types/app/bsky/notification/listNotifications";
 
+const agent =  new AtpAgent({
+    service: "https://bsky.social"
+});
+
+let sessionData: AtpSessionData | undefined;
+
 export const getAgent = cache(async (): Promise<AtpAgent> => {
-    const agent =  new AtpAgent({
-        service: "https://bsky.social"
-    });
-    await agent.login({
+    
+    if(sessionData) {
+        console.log("Resuming session")
+        await agent.resumeSession(sessionData)
+        return agent;
+    }
+    console.log("Creating new session")
+    const { data } = await agent.login({
         identifier: process.env.BLUESKY_USERNAME! as string,
         password: process.env.BLUESKY_PASSWORD! as string
     })
+
+    sessionData = data as AtpSessionData
+    
     return agent;
 })
 
@@ -119,7 +133,7 @@ export const runMainBotFeature = async () => {
                     const percentage = Math.round(classification.ai*100) + "% probability";
                     const aiText = `This image is probably AI generated (${percentage})`
                     const humanText = `This image is probably not AI Generated (${percentage})`
-                    respondText = `Hi there! ${classification.ai > 0.5 ? aiText : humanText}`
+                    respondText = `Hi there! ${classification.ai >= 0.5 ? aiText : humanText}`
                 } catch(e) {
                     const err = e as Error;
                     respondText = `Oops! An error occurred: ${err.message}`
