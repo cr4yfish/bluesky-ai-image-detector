@@ -119,7 +119,7 @@ export const runMainBotFeature = async () => {
                     const percentage = Math.round(classification.ai*100) + "% probability";
                     const aiText = `This image is probably AI generated (${percentage})`
                     const humanText = `This image is probably not AI Generated (${percentage})`
-                    respondText = `Hi there! ${classification.ai > 50 ? aiText : humanText}`
+                    respondText = `Hi there! ${classification.ai > 0.5 ? aiText : humanText}`
                 } catch(e) {
                     const err = e as Error;
                     respondText = `Oops! An error occurred: ${err.message}`
