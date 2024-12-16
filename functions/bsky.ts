@@ -53,7 +53,7 @@ export const getImagesOfPost = async (post: PostView) => {
 export const getNotifications = async (reason?: string[]): Promise<Notification[]> => {
     const agent = await getAgent();
     const { data: { notifications }} = await agent.listNotifications({
-        limit: 10,
+        limit: 25,
         reasons: reason
     });
     return notifications;
