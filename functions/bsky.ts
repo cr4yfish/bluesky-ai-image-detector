@@ -17,13 +17,6 @@ export const getAgent = cache(async (): Promise<AtpAgent> => {
     return agent;
 })
 
-export const testPost = async () => {
-    const agent = await getAgent();
-    await agent.post({
-        text: "Hello World (testing out the API)",
-    })
-}
-
 export const getPost = async (uri: string): Promise<PostView> => {
     const agent = await getAgent();
     const { data: { thread: { post }} } = await agent.getPostThread({
@@ -52,25 +45,6 @@ export const getNotifications = async (reason?: string[]): Promise<Notification[
     return notifications;
 }
 
-export const respondToPost = async(text: string, post: { uri: string, cid: string }) => {
-    console.log("Responding to post")
-    const agent = await getAgent();
-    await agent.post({
-        text,
-        reply: {
-            root: {
-                uri: post.uri,
-                cid: post.cid
-            },
-            parent: {
-                uri: post.uri,
-                cid: post.cid
-            }
-        }
-    })
-    console.log("Responded to post")
-}
-
 export const respondToComment = async (text: string, post: { uri: string, cid: string}, parent: { uri: string, cid: string }) => {
     console.log("Responding to comment");
     const agent = await getAgent();
@@ -88,31 +62,6 @@ export const respondToComment = async (text: string, post: { uri: string, cid: s
         }
     })
     console.log("Responded to comment");
-}
-
-export const respondToNotfications = async (text: string, reasons: string[]) => {
-    const replies = await getNotifications(reasons);
-    replies.forEach(async (reply) => {
-        const agent = await getAgent();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const record = reply.record as Record<string, any>;
-
-        const isReply = record.reply?.root?.uri ? true : false;
-
-        await agent.post({
-            text: text,
-            reply: {
-                root: {
-                    uri: isReply ? record.reply.root.uri : reply.uri,
-                    cid: isReply ? record.reply.root.cid : reply.cid
-                },
-                parent: {
-                    uri: reply.uri,
-                    cid: reply.cid
-                }
-            }
-        })
-    })
 }
 
 export const classifyPost = async (post: PostView) => {
